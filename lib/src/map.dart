@@ -206,7 +206,7 @@ class MapPickerState extends State<MapPicker> {
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
-          mainAxisSize: MainAxisSize.max,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
               padding: EdgeInsets.all(16),
