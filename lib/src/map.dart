@@ -200,20 +200,20 @@ class MapPickerState extends State<MapPicker> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20.0),
-            topRight: Radius.circular(20.0),
+            topLeft: Radius.circular(12.0),
+            topRight: Radius.circular(12.0),
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
             Padding(
               padding: EdgeInsets.all(16),
               child: widget.titleBottom,
             ),
             Padding(
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.all(12),
               child: Consumer<LocationProvider>(
                 builder: (context, locationProvider, _) {
                   return InkWell(
@@ -260,7 +260,34 @@ class MapPickerState extends State<MapPicker> {
                 },
               ),
             ),
-            widget.button,
+            Consumer<LocationProvider>(builder: (context, locationProvider, _) {
+              return Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 16,
+                ),
+                child: FlatButton(
+                  color: Color(0xFF00E0FF),
+                  child: Text(
+                    "Confirmar",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop({
+                      'location': LocationResult(
+                        latLng: locationProvider.lastIdleLocation,
+                        address: _address,
+                        placeId: _placeId,
+                      )
+                    });
+                  },
+                ),
+              );
+            }),
           ],
         ),
       ),
