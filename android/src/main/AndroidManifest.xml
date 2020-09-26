@@ -1,1 +1,3 @@
-<manifest package="com.humazed.google_map_location_picker" />
+<manifest package="com.humazed.google_map_location_picker">
+    <uses-permission android:name="android.permission.INTERNET"/>
+</manifest>
