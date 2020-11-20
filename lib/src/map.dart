@@ -7,10 +7,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:geolocator/geolocator.dart';
-import 'package:google_map_location_picker/generated/l10n.dart';
-import 'package:google_map_location_picker/src/providers/location_provider.dart';
-import 'package:google_map_location_picker/src/utils/loading_builder.dart';
-import 'package:google_map_location_picker/src/utils/log.dart';
+import 'package:flutter_google_map_location_picker/generated/l10n.dart';
+import 'package:flutter_google_map_location_picker/src/providers/location_provider.dart';
+import 'package:flutter_google_map_location_picker/src/utils/loading_builder.dart';
+import 'package:flutter_google_map_location_picker/src/utils/log.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -29,26 +29,37 @@ class MapPicker extends StatefulWidget {
     this.layersButtonEnabled,
     this.automaticallyAnimateToCurrentLocation,
     this.mapStylePath,
-    this.titleBottom,
-    this.borderColor,
-    this.button,
-    this.heightBottom,
-    this.primaryColor,
+    this.appBarColor,
+    this.searchBarBoxDecoration,
+    this.hintText,
+    this.resultCardConfirmIcon,
+    this.resultCardAlignment,
+    this.resultCardDecoration,
+    this.resultCardPadding,
+    this.language,
   }) : super(key: key);
 
   final String apiKey;
+
   final LatLng initialCenter;
   final double initialZoom;
+
   final bool requiredGPS;
   final bool myLocationButtonEnabled;
   final bool layersButtonEnabled;
   final bool automaticallyAnimateToCurrentLocation;
+
   final String mapStylePath;
-  final Text titleBottom;
-  final Color borderColor;
-  final Widget button;
-  final double heightBottom;
-  final Color primaryColor;
+
+  final Color appBarColor;
+  final BoxDecoration searchBarBoxDecoration;
+  final String hintText;
+  final Widget resultCardConfirmIcon;
+  final Alignment resultCardAlignment;
+  final Decoration resultCardDecoration;
+  final EdgeInsets resultCardPadding;
+
+  final String language;
 
   @override
   MapPickerState createState() => MapPickerState();
@@ -58,10 +69,15 @@ class MapPickerState extends State<MapPicker> {
   Completer<GoogleMapController> mapController = Completer();
 
   MapType _currentMapType = MapType.normal;
+
   String _mapStyle;
+
   LatLng _lastMapPosition;
+
   Position _currentPosition;
+
   String _address;
+
   String _placeId;
 
   void _onToggleMapTypePressed() {
@@ -177,13 +193,6 @@ class MapPickerState extends State<MapPicker> {
             mapType: _currentMapType,
             myLocationEnabled: true,
           ),
-          _MapFabs(
-            myLocationButtonEnabled: widget.myLocationButtonEnabled,
-            layersButtonEnabled: widget.layersButtonEnabled,
-            onToggleMapTypePressed: _onToggleMapTypePressed,
-            onMyLocationPressed: _initCurrentLocation,
-            primaryColor: widget.primaryColor,
-          ),
           pin(),
           locationCard(),
         ],
@@ -193,41 +202,50 @@ class MapPickerState extends State<MapPicker> {
 
   Widget locationCard() {
     return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        width: MediaQuery.of(context).size.width,
-        height: widget.heightBottom,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(12.0),
-            topRight: Radius.circular(12.0),
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: widget.titleBottom,
+      alignment: widget.resultCardAlignment ?? Alignment.bottomCenter,
+      child: Padding(
+        padding: widget.resultCardPadding ?? EdgeInsets.all(0),
+        child: Container(
+          width: MediaQuery.of(context).size.width,
+          height: 200,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20.0),
+              topRight: Radius.circular(20.0),
             ),
-            Padding(
-              padding: EdgeInsets.all(12),
-              child: Consumer<LocationProvider>(
-                builder: (context, locationProvider, _) {
-                  return InkWell(
-                    child: Container(
-                      height: 70,
-                      width: MediaQuery.of(context).size.width,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: widget.borderColor, width: 2),
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(8),
-                        ),
-                      ),
-                      child: Flexible(
-                        flex: 20,
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                offset: Offset(0.0, -3.0),
+                blurRadius: 5.0,
+              ),
+            ],
+          ),
+          child: Consumer<LocationProvider>(
+              builder: (context, locationProvider, _) {
+            return Column(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(top: 16),
+                  child: Text(
+                    'Confirmar localização',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontFamily: "Gilroy",
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      Flexible(
                         child: FutureLoadingBuilder<Map<String, String>>(
                           future: getAddress(locationProvider.lastIdleLocation),
                           mutable: true,
@@ -240,73 +258,173 @@ class MapPickerState extends State<MapPicker> {
                           builder: (context, data) {
                             _address = data["address"];
                             _placeId = data["placeId"];
-                            return Align(
-                              alignment: Alignment.centerLeft,
-                              child: Padding(
-                                padding: EdgeInsets.only(left: 12),
-                                child: Text(
-                                  _address ??
-                                      S.of(context)?.unnamedPlace ??
-                                      'Unnamed place',
-                                  style: TextStyle(fontSize: 18),
+                            return Container(
+                              height: 70,
+                              padding: const EdgeInsets.only(
+                                  left: 16, right: 16, top: 12, bottom: 12),
+                              width: MediaQuery.of(context).size.width,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: Color(0xFF00E0FF), width: 2),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(8),
                                 ),
+                              ),
+                              child: Text(
+                                _address ??
+                                    S.of(context)?.unnamedPlace ??
+                                    'Unnamed place',
+                                style: TextStyle(fontSize: 18),
                               ),
                             );
                           },
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            Consumer<LocationProvider>(builder: (context, locationProvider, _) {
-              return Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 16,
-                ),
-                child: FlatButton(
-                  color: Color(0xFF00E0FF),
-                  child: Text(
-                    "Confirmar",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    ],
                   ),
-                  onPressed: () {
-                    Navigator.of(context).pop({
-                      'location': LocationResult(
-                        latLng: locationProvider.lastIdleLocation,
-                        address: _address,
-                        placeId: _placeId,
-                      )
-                    });
-                  },
                 ),
-              );
-            }),
-          ],
+                Padding(
+                    padding:
+                        const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width,
+                      child: RaisedButton(
+                          elevation: 0,
+                          color: Color(0xFF00E0FF),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Text('Confirmar',
+                                style: TextStyle(
+                                    fontSize: 18, color: Colors.white)),
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).pop({
+                              'location': LocationResult(
+                                latLng: locationProvider.lastIdleLocation,
+                                address: _address,
+                                placeId: _placeId,
+                              )
+                            });
+                          }),
+                    )),
+              ],
+            );
+          }),
         ),
       ),
     );
   }
 
+  // Widget locationCard() {
+  //   return Align(
+  //     alignment: Alignment.bottomCenter,
+  //     child: Container(
+  //       width: MediaQuery.of(context).size.width,
+  //       height: 220,
+  //       decoration: BoxDecoration(
+  //         color: Colors.white,
+  //         borderRadius: BorderRadius.only(
+  //           topLeft: Radius.circular(20.0),
+  //           topRight: Radius.circular(20.0),
+  //         ),
+  //       ),
+  //       child:
+  //           Consumer<LocationProvider>(builder: (context, locationProvider, _) {
+  //         return Column(
+  //             mainAxisAlignment: MainAxisAlignment.start,
+  //             mainAxisSize: MainAxisSize.min,
+  //             children: [
+  //               Padding(
+  //                 padding: EdgeInsets.all(16),
+  //                 child: Text(
+  //                   'Confirmar localização',
+  //                   style: TextStyle(
+  //                     fontSize: 22,
+  //                     fontFamily: "Gilroy",
+  //                     fontWeight: FontWeight.w800,
+  //                     color: Colors.black,
+  //                   ),
+  //                 ),
+  //               ),
+  //               Padding(
+  //                 padding: EdgeInsets.all(20),
+  //                 child: Container(
+  //                   height: 70,
+  //                   width: 20,
+  //                   decoration: BoxDecoration(
+  //                     border: Border.all(color: Color(0xFF00E0FF), width: 2),
+  //                     borderRadius: BorderRadius.all(
+  //                       Radius.circular(8),
+  //                     ),
+  //                   ),
+  //                   child: Flexible(
+  //                     flex: 20,
+  //                     child: FutureLoadingBuilder<Map<String, String>>(
+  //                       future: getAddress(locationProvider.lastIdleLocation),
+  //                       mutable: true,
+  //                       loadingIndicator: Row(
+  //                         mainAxisAlignment: MainAxisAlignment.center,
+  //                         children: <Widget>[
+  //                           CircularProgressIndicator(),
+  //                         ],
+  //                       ),
+  //                       builder: (context, data) {
+  //                         _address = data["address"];
+  //                         _placeId = data["placeId"];
+  //                         return Align(
+  //                           alignment: Alignment.centerLeft,
+  //                           child: Padding(
+  //                             padding: EdgeInsets.only(left: 12),
+  //                             child: Text(
+  //                               _address ??
+  //                                   S.of(context)?.unnamedPlace ??
+  //                                   'Unnamed place',
+  //                               style: TextStyle(fontSize: 18),
+  //                             ),
+  //                           ),
+  //                         );
+  //                       },
+  //                     ),
+  //                   ),
+  //                 ),
+  //               ),
+  //               Container(
+  //                 width: 20,
+  //                 child: RaisedButton(
+  //                     elevation: 0,
+  //                     color: Color(0xFF00E0FF),
+  //                     child: Padding(
+  //                       padding: const EdgeInsets.all(16.0),
+  //                       child: Text('Confirmar'),
+  //                     ),
+  //                     onPressed: () {
+  //                       Navigator.of(context).pop({
+  //                         'location': LocationResult(
+  //                           latLng: locationProvider.lastIdleLocation,
+  //                           address: _address,
+  //                           placeId: _placeId,
+  //                         )
+  //                       });
+  //                     }),
+  //               ),
+  //             ]);
+  //       }),
+  //     ),
+  //   );
+  // }
+
   Future<Map<String, String>> getAddress(LatLng location) async {
     try {
+      var key = 'd459srcm0UyMinUKD21vKWMN2TAOrTeEDyqV7ATPIl4';
       final endPoint =
-          'https://maps.googleapis.com/maps/api/geocode/json?latlng=${location?.latitude},${location?.longitude}'
-          '&key=${widget.apiKey}&language=pt';
-
-      var response = jsonDecode((await http.get(endPoint,
-              headers: await LocationUtils.getAppHeaders()))
-          .body);
-
+          'https://revgeocode.search.hereapi.com/v1/revgeocode?at=${location?.latitude},${location?.longitude}&apiKey=' +
+              key;
+      print(endPoint);
+      print('---------');
+      var response = jsonDecode((await http.get(endPoint)).body);
       return {
-        "placeId": response['results'][0]['place_id'],
-        "address": response['results'][0]['formatted_address']
+        "placeId": response['items'][0]['id'],
+        "address": response['items'][0]['title']
       };
     } catch (e) {
       print(e);
@@ -324,7 +442,7 @@ class MapPickerState extends State<MapPicker> {
             Icon(
               Icons.place,
               size: 56,
-              color: widget.primaryColor,
+              color: Color(0xFF00E0FF),
             ),
             Container(
               decoration: ShapeDecoration(
@@ -480,34 +598,28 @@ class _MapFabs extends StatelessWidget {
     @required this.layersButtonEnabled,
     @required this.onToggleMapTypePressed,
     @required this.onMyLocationPressed,
-    @required this.primaryColor,
   })  : assert(onToggleMapTypePressed != null),
         super(key: key);
 
   final bool myLocationButtonEnabled;
   final bool layersButtonEnabled;
-  final Color primaryColor;
+
   final VoidCallback onToggleMapTypePressed;
   final VoidCallback onMyLocationPressed;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.only(
-          bottom: MediaQuery.of(context).size.height / 2.5, right: 10),
       alignment: Alignment.bottomRight,
-      child: (myLocationButtonEnabled)
-          ? FloatingActionButton(
-              onPressed: onMyLocationPressed,
-              materialTapTargetSize: MaterialTapTargetSize.padded,
-              child: Icon(
-                Icons.my_location,
-                color: primaryColor,
-              ),
-              heroTag: "myLocation",
-              backgroundColor: Colors.white,
-            )
-          : Container(),
+      padding: EdgeInsets.only(bottom: 250, right: 12),
+      child: FloatingActionButton(
+        backgroundColor: Color(0xFF00E0FF),
+        onPressed: onMyLocationPressed,
+        materialTapTargetSize: MaterialTapTargetSize.padded,
+        mini: false,
+        child: const Icon(Icons.my_location),
+        heroTag: "myLocation",
+      ),
     );
   }
 }

@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:google_map_location_picker/generated/l10n.dart';
-import 'package:google_map_location_picker/src/map.dart';
-import 'package:google_map_location_picker/src/providers/location_provider.dart';
-import 'package:google_map_location_picker/src/rich_suggestion.dart';
-import 'package:google_map_location_picker/src/search_input.dart';
-import 'package:google_map_location_picker/src/utils/uuid.dart';
+import 'package:flutter_google_map_location_picker/generated/l10n.dart';
+import 'package:flutter_google_map_location_picker/src/map.dart';
+import 'package:flutter_google_map_location_picker/src/providers/location_provider.dart';
+import 'package:flutter_google_map_location_picker/src/rich_suggestion.dart';
+import 'package:flutter_google_map_location_picker/src/search_input.dart';
+import 'package:flutter_google_map_location_picker/src/utils/uuid.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -29,13 +29,15 @@ class LocationPicker extends StatefulWidget {
     this.layersButtonEnabled,
     this.automaticallyAnimateToCurrentLocation,
     this.mapStylePath,
+    this.appBarColor,
+    this.searchBarBoxDecoration,
+    this.hintText,
+    this.resultCardConfirmIcon,
+    this.resultCardAlignment,
+    this.resultCardDecoration,
+    this.resultCardPadding,
     this.countries,
     this.language = 'en',
-    this.titleBottom,
-    this.borderColor,
-    this.heightBottom,
-    this.button,
-    this.primaryColor,
   });
 
   final String apiKey;
@@ -43,17 +45,23 @@ class LocationPicker extends StatefulWidget {
   final LatLng initialCenter;
   final double initialZoom;
   final List<String> countries;
+
   final bool requiredGPS;
   final bool myLocationButtonEnabled;
   final bool layersButtonEnabled;
   final bool automaticallyAnimateToCurrentLocation;
+
   final String mapStylePath;
-  final Text titleBottom;
-  final Color borderColor;
-  final double heightBottom;
+
+  final Color appBarColor;
+  final BoxDecoration searchBarBoxDecoration;
+  final String hintText;
+  final Widget resultCardConfirmIcon;
+  final Alignment resultCardAlignment;
+  final Decoration resultCardDecoration;
+  final EdgeInsets resultCardPadding;
+
   final String language;
-  final Widget button;
-  final Color primaryColor;
 
   @override
   LocationPickerState createState() => LocationPickerState();
@@ -123,7 +131,7 @@ class LocationPickerState extends State<LocationPicker> {
                 SizedBox(width: 24),
                 Expanded(
                   child: Text(
-                    S.of(context)?.finding_place ?? 'Finding place...',
+                    'Carregando...',
                     style: TextStyle(fontSize: 16),
                   ),
                 )
@@ -146,20 +154,21 @@ class LocationPickerState extends State<LocationPicker> {
     final countries = widget.countries;
 
     // Currently, you can use components to filter by up to 5 countries. from https://developers.google.com/places/web-service/autocomplete
-    String regionParam = countries?.isNotEmpty == true
-        ? "&components=country:${countries.sublist(0, min(countries.length, 5)).join('|country:')}"
-        : "";
+    String regionParam =
+        countries?.isNotEmpty == true ? countries.join(', ') : "";
 
     var endpoint =
         "https://maps.googleapis.com/maps/api/place/autocomplete/json?" +
             "key=${widget.apiKey}&" +
-            "input={$place}$regionParam&sessiontoken=$sessionToken&" +
+            "input={$place} $regionParam&sessiontoken=$sessionToken&" +
             "language=${widget.language}";
 
     if (locationResult != null) {
       endpoint += "&location=${locationResult.latLng.latitude}," +
           "${locationResult.latLng.longitude}";
     }
+    print('-----------');
+    print(endpoint);
 
     LocationUtils.getAppHeaders()
         .then((headers) => http.get(endpoint, headers: headers))
@@ -209,7 +218,7 @@ class LocationPickerState extends State<LocationPicker> {
         "https://maps.googleapis.com/maps/api/place/details/json?key=${widget.apiKey}" +
             "&placeid=$placeId" +
             '&language=${widget.language}';
-
+    print(endpoint);
     LocationUtils.getAppHeaders()
         .then((headers) => http.get(endpoint, headers: headers))
         .then((response) {
@@ -316,7 +325,10 @@ class LocationPickerState extends State<LocationPicker> {
             "&key=${widget.apiKey}" +
             "&language=${widget.language}",
         headers: await LocationUtils.getAppHeaders());
-
+    print(
+        "https://maps.googleapis.com/maps/api/geocode/json?latlng=${latLng.latitude},${latLng.longitude}" +
+            "&key=${widget.apiKey}" +
+            "&language=${widget.language}");
     if (response.statusCode == 200) {
       Map<String, dynamic> responseJson = jsonDecode(response.body);
 
@@ -381,8 +393,14 @@ class LocationPickerState extends State<LocationPicker> {
           appBar: AppBar(
             iconTheme: Theme.of(context).iconTheme,
             elevation: 0,
-            backgroundColor: Colors.transparent,
+            backgroundColor: widget.appBarColor,
             key: appBarKey,
+            title: SearchInput(
+              (input) => searchPlace(input),
+              key: searchInputKey,
+              boxDecoration: widget.searchBarBoxDecoration,
+              hintText: widget.hintText,
+            ),
           ),
           body: MapPicker(
             widget.apiKey,
@@ -394,11 +412,15 @@ class LocationPickerState extends State<LocationPicker> {
             automaticallyAnimateToCurrentLocation:
                 widget.automaticallyAnimateToCurrentLocation,
             mapStylePath: widget.mapStylePath,
+            appBarColor: widget.appBarColor,
+            searchBarBoxDecoration: widget.searchBarBoxDecoration,
+            hintText: widget.hintText,
+            resultCardConfirmIcon: widget.resultCardConfirmIcon,
+            resultCardAlignment: widget.resultCardAlignment,
+            resultCardDecoration: widget.resultCardDecoration,
+            resultCardPadding: widget.resultCardPadding,
             key: mapKey,
-            titleBottom: widget.titleBottom,
-            borderColor: widget.borderColor,
-            button: widget.button,
-            primaryColor: widget.primaryColor,
+            language: widget.language,
           ),
         );
       }),
@@ -427,12 +449,14 @@ Future<LocationResult> showLocationPicker(
   bool layersButtonEnabled = false,
   bool automaticallyAnimateToCurrentLocation = true,
   String mapStylePath,
-  Text titleBottom,
-  Color borderColor,
-  double heightBottom,
+  Color appBarColor = Colors.transparent,
+  BoxDecoration searchBarBoxDecoration,
+  String hintText,
+  Widget resultCardConfirmIcon,
+  AlignmentGeometry resultCardAlignment,
+  EdgeInsetsGeometry resultCardPadding,
+  Decoration resultCardDecoration,
   String language,
-  Widget button,
-  Color primaryColor,
 }) async {
   final results = await Navigator.of(context).push(
     MaterialPageRoute<dynamic>(
@@ -448,14 +472,15 @@ Future<LocationResult> showLocationPicker(
           automaticallyAnimateToCurrentLocation:
               automaticallyAnimateToCurrentLocation,
           mapStylePath: mapStylePath,
+          appBarColor: appBarColor,
+          hintText: hintText,
+          searchBarBoxDecoration: searchBarBoxDecoration,
+          resultCardConfirmIcon: resultCardConfirmIcon,
+          resultCardAlignment: resultCardAlignment,
+          resultCardPadding: resultCardPadding,
+          resultCardDecoration: resultCardDecoration,
           countries: countries,
           language: language,
-          titleBottom: titleBottom,
-          borderColor: borderColor,
-          heightBottom: heightBottom,
-          button: button,
-          primaryColor: primaryColor,
-          
         );
       },
     ),
